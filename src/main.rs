@@ -1,20 +1,20 @@
 use crossterm::{event::Event::Key, terminal};
 use std::io::Result;
 
-mod input;
-mod keyboard;
-mod view;
+mod editor;
 
-use input::*;
-use view::*;
+use editor::*;
 
 fn main() -> Result<()> {
     terminal::enable_raw_mode()?;
+    let mut editor = Editor::new()?;
+
     loop {
-        if editor_refresh_screen().is_err() {
-            die("editor_refresh_screen");
+        if editor.refresh_screen().is_err() {
+            editor.die("editor_refresh_screen");
         };
-        if editor_process_keypress() {
+        if editor.process_keypress() {
+            editor.clear_screen()?;
             break;
         }
     }
