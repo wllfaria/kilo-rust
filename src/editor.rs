@@ -30,6 +30,7 @@ impl Editor {
             if self.screen.refresh().is_err() {
                 self.die("editor_refresh_screen");
             };
+            self.screen.flush()?;
             if self.process_keypress() {
                 self.screen.clear()?;
                 break;
