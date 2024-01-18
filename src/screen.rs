@@ -1,6 +1,8 @@
 use crossterm::{cursor, style::Print, terminal, QueueableCommand};
 use std::io::{stdout, Result, Stdout, Write};
 
+use kilo_rust::Position;
+
 pub struct Screen {
     width: u16,
     height: u16,
@@ -24,43 +26,37 @@ impl Screen {
             if row == self.height / 3 {
                 let mut welcome = format!("Kilo editor -- version {VERSION}");
                 welcome.truncate(self.width as usize);
+
                 if welcome.len() < self.width as usize {
                     let padding = ((self.width - welcome.len() as u16) / 2) as u16;
-                    self.stdout
-                        .queue(cursor::MoveTo(0, row))?
-                        .queue(Print("~".to_string()))?
-                        .queue(cursor::MoveTo(padding, row))?
-                        .queue(Print(welcome))?;
+                    self.move_to(&Position { x: 0, y: row })?;
+                    self.stdout.queue(Print("~".to_string()))?;
+                    self.move_to(&Position { x: padding, y: row })?;
+                    self.stdout.queue(Print(welcome))?;
                 } else {
-                    self.stdout
-                        .queue(cursor::MoveTo(0, row))?
-                        .queue(Print(welcome))?;
+                    self.move_to(&Position { x: 0, y: row })?;
+                    self.stdout.queue(Print(welcome))?;
                 }
             } else {
-                self.stdout
-                    .queue(cursor::MoveTo(0, row))?
-                    .queue(Print("~".to_string()))?;
+                self.move_to(&Position { x: 0, y: row })?;
+                self.stdout.queue(Print("~".to_string()))?;
             }
         }
-        self.stdout.queue(cursor::MoveTo(0, 0))?;
-        Ok(())
-    }
-
-    pub fn refresh(&mut self) -> Result<()> {
-        self.clear()?;
-        self.draw_rows()?;
-        self.stdout.queue(cursor::MoveTo(0, 0))?;
         Ok(())
     }
 
     pub fn clear(&mut self) -> Result<()> {
         self.stdout
-            .queue(terminal::Clear(terminal::ClearType::All))?
-            .queue(cursor::MoveTo(0, 0))?;
+            .queue(terminal::Clear(terminal::ClearType::All))?;
         Ok(())
     }
 
     pub fn flush(&mut self) -> Result<()> {
         self.stdout.flush()
+    }
+
+    pub fn move_to(&mut self, pos: &Position) -> Result<()> {
+        self.stdout.queue(cursor::MoveTo(pos.x, pos.y))?;
+        Ok(())
     }
 }
