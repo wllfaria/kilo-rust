@@ -19,6 +19,8 @@ enum EditorKey {
     Left,
     Down,
     Right,
+    PageUp,
+    PageDown,
 }
 
 pub struct Editor {
@@ -91,6 +93,14 @@ impl Editor {
                     ..
                 } => self.move_cursor(EditorKey::Right),
                 KeyEvent {
+                    code: KeyCode::PageUp,
+                    ..
+                } => self.move_cursor(EditorKey::PageUp),
+                KeyEvent {
+                    code: KeyCode::PageDown,
+                    ..
+                } => self.move_cursor(EditorKey::PageDown),
+                KeyEvent {
                     code: KeyCode::Char(key),
                     ..
                 } => match key {
@@ -116,11 +126,15 @@ impl Editor {
     }
 
     fn move_cursor(&mut self, key: EditorKey) {
+        let bounds = self.screen.bounds();
         match key {
             EditorKey::Up => self.cursor.y = self.cursor.y.saturating_sub(1),
-            EditorKey::Right => self.cursor.x += 1,
-            EditorKey::Down => self.cursor.y += 1,
+            EditorKey::Right if self.cursor.x < bounds.x - 1 => self.cursor.x += 1,
+            EditorKey::Down if self.cursor.y < bounds.y - 1 => self.cursor.y += 1,
             EditorKey::Left => self.cursor.x = self.cursor.x.saturating_sub(1),
+            EditorKey::PageUp => self.cursor.y = 0,
+            EditorKey::PageDown => self.cursor.y = bounds.y,
+            _ => {}
         }
     }
 }

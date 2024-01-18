@@ -59,4 +59,11 @@ impl Screen {
         self.stdout.queue(cursor::MoveTo(pos.x, pos.y))?;
         Ok(())
     }
+
+    pub fn bounds(&self) -> Position {
+        Position {
+            x: self.width,
+            y: self.height,
+        }
+    }
 }
