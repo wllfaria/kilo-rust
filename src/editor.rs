@@ -57,23 +57,35 @@ impl Editor {
                     code: KeyCode::Char('q'),
                     modifiers: KeyModifiers::CONTROL,
                     ..
-                } => Ok(true),
+                } => return Ok(true),
+                KeyEvent {
+                    code: KeyCode::Up, ..
+                } => self.move_cursor('w'),
+                KeyEvent {
+                    code: KeyCode::Left,
+                    ..
+                } => self.move_cursor('a'),
+                KeyEvent {
+                    code: KeyCode::Down,
+                    ..
+                } => self.move_cursor('s'),
+                KeyEvent {
+                    code: KeyCode::Right,
+                    ..
+                } => self.move_cursor('d'),
                 KeyEvent {
                     code: KeyCode::Char(key),
                     ..
-                } => {
-                    match key {
-                        'w' | 'a' | 's' | 'd' => self.move_cursor(key),
-                        _ => {}
-                    }
-                    Ok(false)
-                }
-                _ => Ok(false),
+                } => match key {
+                    'w' | 'a' | 's' | 'd' => self.move_cursor(key),
+                    _ => {}
+                },
+                _ => {}
             }
         } else {
             self.die("unable to read keypress");
-            Ok(false)
         }
+        Ok(false)
     }
 
     pub fn die<S: Into<String>>(&mut self, message: S) {
