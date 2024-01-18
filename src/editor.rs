@@ -19,8 +19,8 @@ enum EditorKey {
     Left,
     Down,
     Right,
-    PageUp,
-    PageDown,
+    Home,
+    End,
 }
 
 pub struct Editor {
@@ -70,6 +70,7 @@ impl Editor {
     }
 
     pub fn process_keypress(&mut self) -> Result<bool> {
+        let bounds = self.screen.bounds();
         if let Ok(c) = self.keyboard.read() {
             match c {
                 KeyEvent {
@@ -95,11 +96,26 @@ impl Editor {
                 KeyEvent {
                     code: KeyCode::PageUp,
                     ..
-                } => self.move_cursor(EditorKey::PageUp),
+                } => {
+                    for _ in 0..bounds.y {
+                        self.move_cursor(EditorKey::Up);
+                    }
+                }
                 KeyEvent {
                     code: KeyCode::PageDown,
                     ..
-                } => self.move_cursor(EditorKey::PageDown),
+                } => {
+                    for _ in 0..bounds.y {
+                        self.move_cursor(EditorKey::Down);
+                    }
+                }
+                KeyEvent {
+                    code: KeyCode::Home,
+                    ..
+                } => self.move_cursor(EditorKey::Home),
+                KeyEvent {
+                    code: KeyCode::End, ..
+                } => self.move_cursor(EditorKey::End),
                 KeyEvent {
                     code: KeyCode::Char(key),
                     ..
@@ -132,8 +148,8 @@ impl Editor {
             EditorKey::Right if self.cursor.x < bounds.x - 1 => self.cursor.x += 1,
             EditorKey::Down if self.cursor.y < bounds.y - 1 => self.cursor.y += 1,
             EditorKey::Left => self.cursor.x = self.cursor.x.saturating_sub(1),
-            EditorKey::PageUp => self.cursor.y = 0,
-            EditorKey::PageDown => self.cursor.y = bounds.y,
+            EditorKey::Home => self.cursor.x = 0,
+            EditorKey::End => self.cursor.x = bounds.x,
             _ => {}
         }
     }
