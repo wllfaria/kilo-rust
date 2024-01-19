@@ -30,21 +30,18 @@ pub struct Editor {
     cursor: Position,
     keymap: HashMap<char, EditorKey>,
     rows: Vec<String>,
+    scroll_offset: usize,
 }
 
 impl Editor {
     pub fn new<P: AsRef<Path>>(filename: Option<P>) -> Result<Self> {
         let rows = match filename {
-            Some(path) => {
-                std::fs::read_to_string(path)
-                    .unwrap()
-                    .split('\n')
-                    .fold(vec![], |mut acc, x| {
-                        acc.push(x.to_string());
-                        acc
-                    })
-            }
             None => Vec::new(),
+            Some(path) => std::fs::read_to_string(path)
+                .unwrap()
+                .split('\n')
+                .map(|x| x.into())
+                .collect(),
         };
 
         let mut keymap = HashMap::with_capacity(4);
@@ -59,6 +56,7 @@ impl Editor {
             cursor: Default::default(),
             keymap,
             rows,
+            scroll_offset: 0,
         })
     }
 
@@ -68,7 +66,7 @@ impl Editor {
             if self.refresh_screen().is_err() {
                 self.die("editor_refresh_screen");
             };
-            self.screen.move_to(&self.cursor)?;
+            self.screen.move_to(&self.cursor, self.scroll_offset)?;
             self.screen.flush()?;
             if self.process_keypress()? {
                 self.screen.clear()?;
@@ -80,9 +78,20 @@ impl Editor {
     }
 
     pub fn refresh_screen(&mut self) -> Result<()> {
+        self.scroll();
         self.screen.clear()?;
-        self.screen.draw_rows(&self.rows)?;
+        self.screen.draw_rows(&self.rows, self.scroll_offset)?;
         Ok(())
+    }
+
+    pub fn scroll(&mut self) {
+        let bounds = self.screen.bounds();
+        if (self.cursor.y as usize) < self.scroll_offset {
+            self.scroll_offset = self.cursor.y as usize;
+        }
+        if (self.cursor.y as usize) >= self.scroll_offset + bounds.y as usize {
+            self.scroll_offset = self.cursor.y as usize - bounds.y as usize + 1;
+        }
     }
 
     pub fn process_keypress(&mut self) -> Result<bool> {
@@ -162,7 +171,7 @@ impl Editor {
         match key {
             EditorKey::Up => self.cursor.y = self.cursor.y.saturating_sub(1),
             EditorKey::Right if self.cursor.x < bounds.x - 1 => self.cursor.x += 1,
-            EditorKey::Down if self.cursor.y < bounds.y - 1 => self.cursor.y += 1,
+            EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 1 => self.cursor.y += 1,
             EditorKey::Left => self.cursor.x = self.cursor.x.saturating_sub(1),
             EditorKey::Home => self.cursor.x = 0,
             EditorKey::End => self.cursor.x = bounds.x,

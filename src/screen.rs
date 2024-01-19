@@ -19,34 +19,38 @@ impl Screen {
         })
     }
 
-    pub fn draw_rows(&mut self, rows: &[String]) -> Result<()> {
+    pub fn draw_rows(&mut self, rows: &[String], offset: usize) -> Result<()> {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
 
         for row in 0..self.height {
+            let file_row = row as usize + offset;
             if row >= rows.len() as u16 {
-                if rows.len() == 0 && row == self.height / 3 {
+                if rows.is_empty() && row == self.height / 3 {
                     let mut welcome = format!("Kilo editor -- version {VERSION}");
                     welcome.truncate(self.width as usize);
 
                     if welcome.len() < self.width as usize {
                         let padding = ((self.width - welcome.len() as u16) / 2) as u16;
-                        self.move_to(&Position { x: 0, y: row })?;
-                        self.stdout.queue(Print("~".to_string()))?;
-                        self.move_to(&Position { x: padding, y: row })?;
-                        self.stdout.queue(Print(welcome))?;
+                        self.stdout
+                            .queue(cursor::MoveTo(0, row))?
+                            .queue(Print("~".to_string()))?
+                            .queue(cursor::MoveTo(padding, row))?
+                            .queue(Print(welcome))?;
                     } else {
-                        self.move_to(&Position { x: 0, y: row })?;
-                        self.stdout.queue(Print(welcome))?;
+                        self.stdout
+                            .queue(cursor::MoveTo(0, row))?
+                            .queue(Print(welcome))?;
                     }
                 } else {
-                    self.move_to(&Position { x: 0, y: row })?;
-                    self.stdout.queue(Print("~".to_string()))?;
+                    self.stdout
+                        .queue(cursor::MoveTo(0, row))?
+                        .queue(Print("~".to_string()))?;
                 }
             } else {
-                let len = rows[row as usize].len().min(self.width as usize);
+                let len = rows[file_row].len().min(self.width as usize);
                 self.stdout
                     .queue(cursor::MoveTo(0, row))?
-                    .queue(Print(rows[row as usize][0..len].to_string()))?;
+                    .queue(Print(rows[file_row][0..len].to_string()))?;
             }
         }
         Ok(())
@@ -62,8 +66,9 @@ impl Screen {
         self.stdout.flush()
     }
 
-    pub fn move_to(&mut self, pos: &Position) -> Result<()> {
-        self.stdout.queue(cursor::MoveTo(pos.x, pos.y))?;
+    pub fn move_to(&mut self, pos: &Position, offset: usize) -> Result<()> {
+        self.stdout
+            .queue(cursor::MoveTo(pos.x, pos.y - offset as u16))?;
         Ok(())
     }
 
