@@ -34,7 +34,8 @@ pub struct Editor {
     col_offset: u16,
     status_msg: String,
     status_msg_timestamp: i32,
-    dirty: bool,
+    dirty: u16,
+    quit_attempts: u8,
 }
 
 impl Editor {
@@ -69,7 +70,8 @@ impl Editor {
             filename: name,
             status_msg: String::new(),
             status_msg_timestamp: 0,
-            dirty: false,
+            dirty: 0,
+            quit_attempts: 3,
         })
     }
 
@@ -109,7 +111,7 @@ impl Editor {
         let rows = self.rows_to_string();
         std::fs::write(&self.filename, rows)?;
         self.set_status_msg(format!("{} {}L written", self.filename, self.rows.len()));
-        self.dirty = false;
+        self.dirty = 0;
         Ok(())
     }
 
@@ -119,7 +121,7 @@ impl Editor {
         left.push(c);
         let right = self.rows[row][at..].to_string();
         self.rows[row] = left + &right;
-        self.dirty = true;
+        self.dirty += 1;
     }
 
     pub fn insert_char(&mut self, c: char) {
@@ -168,13 +170,27 @@ impl Editor {
 
     pub fn process_keypress(&mut self) -> Result<bool> {
         let bounds = self.screen.bounds();
+
         if let Ok(c) = self.keyboard.read() {
             match c {
                 KeyEvent {
                     code: KeyCode::Char('q'),
                     modifiers: KeyModifiers::CONTROL,
                     ..
-                } => return Ok(true),
+                } => {
+                    if self.dirty == 0 {
+                        return Ok(true);
+                    }
+                    if self.quit_attempts == 0 {
+                        return Ok(true);
+                    }
+                    self.set_status_msg(format!(
+                        "WARNING!!! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
+                        self.quit_attempts
+                    ));
+                    self.quit_attempts -= 1;
+                    return Ok(false);
+                }
                 KeyEvent {
                     code: KeyCode::Up, ..
                 } => self.move_cursor(EditorKey::Up),

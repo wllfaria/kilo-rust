@@ -79,7 +79,7 @@ impl Screen {
         rows: &[String],
         filename: &String,
         cursor_row: u16,
-        dirty: bool,
+        dirty: u16,
     ) -> Result<()> {
         let status_line = self.height;
         let background = " ".on(Color::White);
@@ -89,7 +89,7 @@ impl Screen {
         };
         let mut filename = format!("{name} ");
         let modified = "(modified) ".to_string();
-        if dirty {
+        if dirty > 0 {
             filename += &modified
         };
         let total_lines = format!("- {} lines", rows.len());
