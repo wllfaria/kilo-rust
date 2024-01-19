@@ -34,6 +34,7 @@ pub struct Editor {
     col_offset: u16,
     status_msg: String,
     status_msg_timestamp: i32,
+    dirty: bool,
 }
 
 impl Editor {
@@ -68,6 +69,7 @@ impl Editor {
             filename: name,
             status_msg: String::new(),
             status_msg_timestamp: 0,
+            dirty: false,
         })
     }
 
@@ -107,6 +109,7 @@ impl Editor {
         let rows = self.rows_to_string();
         std::fs::write(&self.filename, rows)?;
         self.set_status_msg(format!("{} {}L written", self.filename, self.rows.len()));
+        self.dirty = false;
         Ok(())
     }
 
@@ -116,6 +119,7 @@ impl Editor {
         left.push(c);
         let right = self.rows[row][at..].to_string();
         self.rows[row] = left + &right;
+        self.dirty = true;
     }
 
     pub fn insert_char(&mut self, c: char) {
@@ -140,7 +144,7 @@ impl Editor {
         self.screen
             .draw_rows(&self.rows, self.row_offset, self.col_offset)?;
         self.screen
-            .draw_status_bar(&self.rows, &self.filename, self.cursor.y)?;
+            .draw_status_bar(&self.rows, &self.filename, self.cursor.y, self.dirty)?;
         self.screen
             .draw_msg_bar(&self.status_msg, self.status_msg_timestamp)?;
         Ok(())
@@ -243,7 +247,9 @@ impl Editor {
         match key {
             EditorKey::Up => self.cursor.y = self.cursor.y.saturating_sub(1),
             EditorKey::Right => match self.cursor.x as usize {
-                _ if self.cursor.x as usize >= row_len => {
+                _ if self.cursor.x as usize >= row_len
+                    && self.cursor.y < self.rows.len() as u16 - 1 =>
+                {
                     self.cursor.y += 1;
                     self.cursor.x = 0;
                 }

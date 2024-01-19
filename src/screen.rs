@@ -79,6 +79,7 @@ impl Screen {
         rows: &[String],
         filename: &String,
         cursor_row: u16,
+        dirty: bool,
     ) -> Result<()> {
         let status_line = self.height;
         let background = " ".on(Color::White);
@@ -86,8 +87,14 @@ impl Screen {
             true => String::from("[No Name]"),
             false => filename.to_string(),
         };
+        let mut filename = format!("{name} ");
+        let modified = "(modified) ".to_string();
+        if dirty {
+            filename += &modified
+        };
+        let total_lines = format!("- {} lines", rows.len());
+        let status = filename + &total_lines;
         let lines = format!("{}/{}", cursor_row + 1, rows.len());
-        let status = format!("{name} - {} lines", rows.len());
         let status = match status.len() > self.width as usize - lines.len() {
             true => status[0..self.width as usize - lines.len() - 1].to_string(),
             false => status,
