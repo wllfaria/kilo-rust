@@ -1,7 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal;
 use errno::errno;
-use std::collections::HashMap;
 use std::io::Result;
 use std::path::Path;
 use std::time::SystemTime;
@@ -30,7 +29,6 @@ pub struct Editor {
     filename: String,
     keyboard: Keyboard,
     cursor: Position,
-    keymap: HashMap<char, EditorKey>,
     rows: Vec<String>,
     row_offset: u16,
     col_offset: u16,
@@ -60,17 +58,10 @@ impl Editor {
             }
         };
 
-        let mut keymap = HashMap::with_capacity(4);
-        keymap.insert('w', EditorKey::Up);
-        keymap.insert('a', EditorKey::Left);
-        keymap.insert('s', EditorKey::Down);
-        keymap.insert('d', EditorKey::Right);
-
         Ok(Self {
             screen: Screen::new()?,
             keyboard: Keyboard {},
             cursor: Default::default(),
-            keymap,
             rows,
             row_offset: 0,
             col_offset: 0,
@@ -96,6 +87,22 @@ impl Editor {
         }
         terminal::disable_raw_mode()?;
         Ok(())
+    }
+
+    pub fn row_insert_char(&mut self, row: usize, at: usize, c: char) {
+        let at = std::cmp::min(at, self.rows[row].len());
+        let mut left = self.rows[row][0..at].to_string();
+        left.push(c);
+        let right = self.rows[row][at..].to_string();
+        self.rows[row] = left + &right;
+    }
+
+    pub fn insert_char(&mut self, c: char) {
+        if self.cursor.y as usize == self.rows.len() {
+            self.rows.push(String::new());
+        }
+        self.row_insert_char(self.cursor.y as usize, self.cursor.x as usize, c);
+        self.cursor.x += 1;
     }
 
     pub fn set_status_msg(&mut self, message: String) {
@@ -184,13 +191,7 @@ impl Editor {
                 KeyEvent {
                     code: KeyCode::Char(key),
                     ..
-                } => match key {
-                    'w' | 'a' | 's' | 'd' => {
-                        let c = *self.keymap.get(&key).unwrap();
-                        self.move_cursor(c);
-                    }
-                    _ => {}
-                },
+                } => self.insert_char(key),
                 _ => {}
             }
         } else {
