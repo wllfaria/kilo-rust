@@ -19,27 +19,34 @@ impl Screen {
         })
     }
 
-    pub fn draw_rows(&mut self) -> Result<()> {
+    pub fn draw_rows(&mut self, rows: &[String]) -> Result<()> {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
 
         for row in 0..self.height {
-            if row == self.height / 3 {
-                let mut welcome = format!("Kilo editor -- version {VERSION}");
-                welcome.truncate(self.width as usize);
+            if row >= rows.len() as u16 {
+                if row == self.height / 3 {
+                    let mut welcome = format!("Kilo editor -- version {VERSION}");
+                    welcome.truncate(self.width as usize);
 
-                if welcome.len() < self.width as usize {
-                    let padding = ((self.width - welcome.len() as u16) / 2) as u16;
-                    self.move_to(&Position { x: 0, y: row })?;
-                    self.stdout.queue(Print("~".to_string()))?;
-                    self.move_to(&Position { x: padding, y: row })?;
-                    self.stdout.queue(Print(welcome))?;
+                    if welcome.len() < self.width as usize {
+                        let padding = ((self.width - welcome.len() as u16) / 2) as u16;
+                        self.move_to(&Position { x: 0, y: row })?;
+                        self.stdout.queue(Print("~".to_string()))?;
+                        self.move_to(&Position { x: padding, y: row })?;
+                        self.stdout.queue(Print(welcome))?;
+                    } else {
+                        self.move_to(&Position { x: 0, y: row })?;
+                        self.stdout.queue(Print(welcome))?;
+                    }
                 } else {
                     self.move_to(&Position { x: 0, y: row })?;
-                    self.stdout.queue(Print(welcome))?;
+                    self.stdout.queue(Print("~".to_string()))?;
                 }
             } else {
-                self.move_to(&Position { x: 0, y: row })?;
-                self.stdout.queue(Print("~".to_string()))?;
+                let len = rows[0].len().min(self.width as usize);
+                self.stdout
+                    .queue(cursor::MoveTo(0, row))?
+                    .queue(Print(rows[0][0..len].to_string()))?;
             }
         }
         Ok(())

@@ -28,6 +28,7 @@ pub struct Editor {
     keyboard: Keyboard,
     cursor: Position,
     keymap: HashMap<char, EditorKey>,
+    rows: Vec<String>,
 }
 
 impl Editor {
@@ -43,6 +44,7 @@ impl Editor {
             keyboard: Keyboard {},
             cursor: Default::default(),
             keymap,
+            rows: vec!["Hello, World!".to_string()],
         })
     }
 
@@ -65,7 +67,7 @@ impl Editor {
 
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.screen.clear()?;
-        self.screen.draw_rows()?;
+        self.screen.draw_rows(&self.rows)?;
         Ok(())
     }
 
