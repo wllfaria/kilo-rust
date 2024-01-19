@@ -33,21 +33,12 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn with_file<P: AsRef<Path>>(filename: P) -> Result<Self> {
-        let first_line = std::fs::read_to_string(filename)
-            .expect("fopen")
-            .split('\n')
-            .next()
-            .unwrap()
-            .to_string();
-        Editor::build(first_line)
-    }
+    pub fn new<P: AsRef<Path>>(filename: Option<P>) -> Result<Self> {
+        let rows = match filename {
+            Some(path) => vec![std::fs::read_to_string(path)?],
+            None => Vec::new(),
+        };
 
-    pub fn new() -> Result<Self> {
-        Editor::build("")
-    }
-
-    pub fn build<T: Into<String>>(data: T) -> Result<Self> {
         let mut keymap = HashMap::with_capacity(4);
         keymap.insert('w', EditorKey::Up);
         keymap.insert('a', EditorKey::Left);
@@ -59,7 +50,7 @@ impl Editor {
             keyboard: Keyboard {},
             cursor: Default::default(),
             keymap,
-            rows: vec![data.into()],
+            rows,
         })
     }
 
