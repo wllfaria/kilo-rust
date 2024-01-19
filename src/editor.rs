@@ -124,6 +124,25 @@ impl Editor {
         self.dirty += 1;
     }
 
+    pub fn del_row(&mut self, at: usize) {
+        if at >= self.rows.len() {
+            return;
+        }
+        self.rows.remove(at);
+        self.dirty += 1;
+    }
+
+    pub fn row_append_string(&mut self, at: usize) {
+        if at > self.rows.len() {
+            return;
+        }
+        let mut left = self.rows[at - 1].clone();
+        let right = self.rows[at].clone();
+        left.push_str(&right);
+        self.rows[at - 1] = left;
+        self.dirty += 1;
+    }
+
     pub fn insert_char(&mut self, c: char) {
         if self.cursor.y as usize == self.rows.len() {
             self.rows.push(String::new());
@@ -145,10 +164,18 @@ impl Editor {
         if self.cursor.y as usize == self.rows.len() {
             return;
         }
+        if self.cursor.x == 0 && self.cursor.y == 0 {
+            return;
+        }
         if self.cursor.x > 0 {
             self.row_del_char(self.cursor.y as usize, self.cursor.x as usize);
             self.cursor.x -= 1;
             return;
+        } else {
+            self.row_append_string(self.cursor.y as usize);
+            self.del_row(self.cursor.y as usize);
+            self.cursor.y -= 1;
+            self.cursor.x = self.rows[self.cursor.y as usize].len() as u16;
         }
     }
 
