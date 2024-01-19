@@ -187,7 +187,14 @@ impl Editor {
             EditorKey::Up => self.cursor.y = self.cursor.y.saturating_sub(1),
             EditorKey::Right if (self.cursor.x as usize) < row_len => self.cursor.x += 1,
             EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 1 => self.cursor.y += 1,
-            EditorKey::Left => self.cursor.x = self.cursor.x.saturating_sub(1),
+            EditorKey::Left => {
+                if self.cursor.x > 0 {
+                    self.cursor.x -= 1
+                } else if self.cursor.y > 0 {
+                    self.cursor.y -= 1;
+                    self.cursor.x = self.rows[self.cursor.y as usize].len() as u16;
+                }
+            }
             EditorKey::Home => self.cursor.x = 0,
             EditorKey::End => self.cursor.x = bounds.x,
             _ => {}
