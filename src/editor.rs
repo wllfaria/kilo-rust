@@ -54,7 +54,7 @@ impl Editor {
                     .unwrap()
                     .split('\n')
                     .map(|x| x.into())
-                    .collect()
+                    .collect();
             }
         };
 
@@ -86,6 +86,27 @@ impl Editor {
             }
         }
         terminal::disable_raw_mode()?;
+        Ok(())
+    }
+
+    pub fn rows_to_string(&self) -> String {
+        let mut rows = String::new();
+        for (idx, row) in self.rows.iter().enumerate() {
+            rows.push_str(row);
+            if idx < self.rows.len() - 1 {
+                rows.push('\n');
+            }
+        }
+        rows
+    }
+
+    pub fn save(&mut self) -> Result<()> {
+        if self.filename.is_empty() {
+            return Ok(());
+        };
+        let rows = self.rows_to_string();
+        std::fs::write(&self.filename, rows)?;
+        self.set_status_msg(format!("{} {}L written", self.filename, self.rows.len()));
         Ok(())
     }
 
@@ -162,6 +183,11 @@ impl Editor {
                     ..
                 } => self.move_cursor(EditorKey::Down),
                 KeyEvent {
+                    code: KeyCode::Char('s'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                } => self.save()?,
+                KeyEvent {
                     code: KeyCode::Right,
                     ..
                 } => self.move_cursor(EditorKey::Right),
@@ -223,7 +249,7 @@ impl Editor {
                 }
                 _ => self.cursor.x += 1,
             },
-            EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 10 => self.cursor.y += 1,
+            EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 1 => self.cursor.y += 1,
             EditorKey::Left => match self.cursor.x {
                 _ if self.cursor.x > 0 => self.cursor.x -= 1,
                 _ if self.cursor.y > 0 => {
