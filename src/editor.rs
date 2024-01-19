@@ -132,6 +132,26 @@ impl Editor {
         self.cursor.x += 1;
     }
 
+    pub fn row_del_char(&mut self, row: usize, at: usize) {
+        let at = std::cmp::min(at, self.rows[row].len());
+        let mut left = self.rows[row][0..at].to_string();
+        left.pop();
+        let right = self.rows[row][at..].to_string();
+        self.rows[row] = left + &right;
+        self.dirty += 1;
+    }
+
+    pub fn del_char(&mut self) {
+        if self.cursor.y as usize == self.rows.len() {
+            return;
+        }
+        if self.cursor.x > 0 {
+            self.row_del_char(self.cursor.y as usize, self.cursor.x as usize);
+            self.cursor.x -= 1;
+            return;
+        }
+    }
+
     pub fn set_status_msg(&mut self, message: String) {
         self.status_msg = message;
         self.status_msg_timestamp = SystemTime::now()
@@ -190,6 +210,17 @@ impl Editor {
                     ));
                     self.quit_attempts -= 1;
                     return Ok(false);
+                }
+                KeyEvent {
+                    code: KeyCode::Backspace,
+                    ..
+                } => self.del_char(),
+                KeyEvent {
+                    code: KeyCode::Delete,
+                    ..
+                } => {
+                    self.move_cursor(EditorKey::Right);
+                    self.del_char();
                 }
                 KeyEvent {
                     code: KeyCode::Up, ..
