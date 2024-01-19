@@ -4,6 +4,7 @@ use errno::errno;
 use std::collections::HashMap;
 use std::io::Result;
 use std::path::Path;
+use std::time::SystemTime;
 
 use crate::keyboard::*;
 use crate::screen::*;
@@ -33,6 +34,8 @@ pub struct Editor {
     rows: Vec<String>,
     row_offset: u16,
     col_offset: u16,
+    status_msg: String,
+    status_msg_timestamp: i32,
 }
 
 impl Editor {
@@ -72,6 +75,8 @@ impl Editor {
             row_offset: 0,
             col_offset: 0,
             filename: name,
+            status_msg: String::new(),
+            status_msg_timestamp: 0,
         })
     }
 
@@ -93,6 +98,14 @@ impl Editor {
         Ok(())
     }
 
+    pub fn set_status_msg(&mut self, message: String) {
+        self.status_msg = message;
+        self.status_msg_timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i32;
+    }
+
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.scroll();
         self.screen.clear()?;
@@ -100,6 +113,8 @@ impl Editor {
             .draw_rows(&self.rows, self.row_offset, self.col_offset)?;
         self.screen
             .draw_status_bar(&self.rows, &self.filename, self.cursor.y)?;
+        self.screen
+            .draw_msg_bar(&self.status_msg, self.status_msg_timestamp)?;
         Ok(())
     }
 
@@ -207,7 +222,7 @@ impl Editor {
                 }
                 _ => self.cursor.x += 1,
             },
-            EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 1 => self.cursor.y += 1,
+            EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 10 => self.cursor.y += 1,
             EditorKey::Left => match self.cursor.x {
                 _ if self.cursor.x > 0 => self.cursor.x -= 1,
                 _ if self.cursor.y > 0 => {

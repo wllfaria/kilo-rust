@@ -3,7 +3,10 @@ use crossterm::{
     style::{Color, Print, Stylize},
     terminal, QueueableCommand,
 };
-use std::io::{stdout, Result, Stdout, Write};
+use std::{
+    io::{stdout, Result, Stdout, Write},
+    time::SystemTime,
+};
 
 use kilo_rust::Position;
 
@@ -16,7 +19,7 @@ pub struct Screen {
 impl Screen {
     pub fn new() -> Result<Self> {
         let (columns, mut rows) = crossterm::terminal::size()?;
-        rows -= 1;
+        rows -= 2;
         Ok(Self {
             width: columns,
             height: rows,
@@ -77,6 +80,7 @@ impl Screen {
         filename: &String,
         cursor_row: u16,
     ) -> Result<()> {
+        let status_line = self.height;
         let background = " ".on(Color::White);
         let name = match filename.is_empty() {
             true => String::from("[No Name]"),
@@ -89,14 +93,37 @@ impl Screen {
             false => status,
         };
         self.stdout
-            .queue(cursor::MoveTo(0, self.height))?
+            .queue(cursor::MoveTo(0, status_line))?
             .queue(Print(status.clone().with(Color::Black).on(Color::White)))?
-            .queue(cursor::MoveTo(self.width - lines.len() as u16, self.height))?
+            .queue(cursor::MoveTo(self.width - lines.len() as u16, status_line))?
             .queue(Print(lines.clone().with(Color::Black).on(Color::White)))?;
         for i in status.len()..self.width as usize - lines.len() {
             self.stdout
-                .queue(cursor::MoveTo(i as u16, self.height))?
+                .queue(cursor::MoveTo(i as u16, status_line))?
                 .queue(Print(background))?;
+        }
+        Ok(())
+    }
+
+    pub fn draw_msg_bar(&mut self, message: &String, message_time: i32) -> Result<()> {
+        let message_line = self.height + 1;
+        let message = match message.len() {
+            x if x as u16 > self.width => message[0..self.width as usize].to_string(),
+            _ => message.to_string(),
+        };
+        self.stdout
+            .queue(cursor::MoveTo(0, message_line))?
+            .queue(terminal::Clear(terminal::ClearType::CurrentLine))?;
+
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i32;
+
+        if now - message_time < 5 {
+            self.stdout
+                .queue(cursor::MoveTo(0, message_line))?
+                .queue(Print(message))?;
         }
         Ok(())
     }
