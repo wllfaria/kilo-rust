@@ -177,15 +177,23 @@ impl Editor {
     }
 
     fn move_cursor(&mut self, key: EditorKey) {
+        let row_len = match self.rows.len() {
+            0 => 0,
+            r if self.cursor.y >= r as u16 => self.rows[self.rows.len() - 1].len(),
+            _ => self.rows[self.cursor.y as usize].len(),
+        };
         let bounds = self.screen.bounds();
         match key {
             EditorKey::Up => self.cursor.y = self.cursor.y.saturating_sub(1),
-            EditorKey::Right => self.cursor.x += 1,
+            EditorKey::Right if (self.cursor.x as usize) < row_len => self.cursor.x += 1,
             EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 1 => self.cursor.y += 1,
             EditorKey::Left => self.cursor.x = self.cursor.x.saturating_sub(1),
             EditorKey::Home => self.cursor.x = 0,
             EditorKey::End => self.cursor.x = bounds.x,
             _ => {}
         }
+        let y = std::cmp::min(self.cursor.y, self.rows.len() as u16 - 1);
+        let row_len = self.rows[y as usize].len();
+        self.cursor.x = std::cmp::min(self.cursor.x, row_len as u16);
     }
 }
