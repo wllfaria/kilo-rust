@@ -26,6 +26,7 @@ enum EditorKey {
 
 pub struct Editor {
     screen: Screen,
+    filename: String,
     keyboard: Keyboard,
     cursor: Position,
     keymap: HashMap<char, EditorKey>,
@@ -36,13 +37,24 @@ pub struct Editor {
 
 impl Editor {
     pub fn new<P: AsRef<Path>>(filename: Option<P>) -> Result<Self> {
-        let rows = match filename {
-            None => Vec::new(),
-            Some(path) => std::fs::read_to_string(path)
-                .unwrap()
-                .split('\n')
-                .map(|x| x.into())
-                .collect(),
+        let mut rows = Vec::new();
+        let mut name = String::new();
+        match filename {
+            None => (),
+            Some(path) => {
+                name = path
+                    .as_ref()
+                    .file_name()
+                    .unwrap()
+                    .to_os_string()
+                    .into_string()
+                    .unwrap();
+                rows = std::fs::read_to_string(path)
+                    .unwrap()
+                    .split('\n')
+                    .map(|x| x.into())
+                    .collect()
+            }
         };
 
         let mut keymap = HashMap::with_capacity(4);
@@ -59,6 +71,7 @@ impl Editor {
             rows,
             row_offset: 0,
             col_offset: 0,
+            filename: name,
         })
     }
 
@@ -85,6 +98,8 @@ impl Editor {
         self.screen.clear()?;
         self.screen
             .draw_rows(&self.rows, self.row_offset, self.col_offset)?;
+        self.screen
+            .draw_status_bar(&self.rows, &self.filename, self.cursor.y)?;
         Ok(())
     }
 
@@ -185,23 +200,22 @@ impl Editor {
         let bounds = self.screen.bounds();
         match key {
             EditorKey::Up => self.cursor.y = self.cursor.y.saturating_sub(1),
-            EditorKey::Right => {
-                if (self.cursor.x as usize) < row_len {
-                    self.cursor.x += 1;
-                } else if self.cursor.x as usize == row_len {
+            EditorKey::Right => match self.cursor.x as usize {
+                _ if self.cursor.x as usize >= row_len => {
                     self.cursor.y += 1;
                     self.cursor.x = 0;
                 }
-            }
+                _ => self.cursor.x += 1,
+            },
             EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 1 => self.cursor.y += 1,
-            EditorKey::Left => {
-                if self.cursor.x > 0 {
-                    self.cursor.x -= 1;
-                } else if self.cursor.y > 0 {
+            EditorKey::Left => match self.cursor.x {
+                _ if self.cursor.x > 0 => self.cursor.x -= 1,
+                _ if self.cursor.y > 0 => {
                     self.cursor.y -= 1;
                     self.cursor.x = self.rows[self.cursor.y as usize].len() as u16;
                 }
-            }
+                _ => {}
+            },
             EditorKey::Home => self.cursor.x = 0,
             EditorKey::End => self.cursor.x = bounds.x,
             _ => {}

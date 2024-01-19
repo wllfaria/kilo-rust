@@ -1,4 +1,8 @@
-use crossterm::{cursor, style::Print, terminal, QueueableCommand};
+use crossterm::{
+    cursor,
+    style::{Color, Print, Stylize},
+    terminal, QueueableCommand,
+};
 use std::io::{stdout, Result, Stdout, Write};
 
 use kilo_rust::Position;
@@ -11,7 +15,8 @@ pub struct Screen {
 
 impl Screen {
     pub fn new() -> Result<Self> {
-        let (columns, rows) = crossterm::terminal::size()?;
+        let (columns, mut rows) = crossterm::terminal::size()?;
+        rows -= 1;
         Ok(Self {
             width: columns,
             height: rows,
@@ -62,6 +67,36 @@ impl Screen {
                     .queue(cursor::MoveTo(0, row))?
                     .queue(Print(rows[file_row][start..end].to_string()))?;
             }
+        }
+        Ok(())
+    }
+
+    pub fn draw_status_bar(
+        &mut self,
+        rows: &[String],
+        filename: &String,
+        cursor_row: u16,
+    ) -> Result<()> {
+        let background = " ".on(Color::White);
+        let name = match filename.is_empty() {
+            true => String::from("[No Name]"),
+            false => filename.to_string(),
+        };
+        let lines = format!("{}/{}", cursor_row + 1, rows.len());
+        let status = format!("{name} - {} lines", rows.len());
+        let status = match status.len() > self.width as usize - lines.len() {
+            true => status[0..self.width as usize - lines.len() - 1].to_string(),
+            false => status,
+        };
+        self.stdout
+            .queue(cursor::MoveTo(0, self.height))?
+            .queue(Print(status.clone().with(Color::Black).on(Color::White)))?
+            .queue(cursor::MoveTo(self.width - lines.len() as u16, self.height))?
+            .queue(Print(lines.clone().with(Color::Black).on(Color::White)))?;
+        for i in status.len()..self.width as usize - lines.len() {
+            self.stdout
+                .queue(cursor::MoveTo(i as u16, self.height))?
+                .queue(Print(background))?;
         }
         Ok(())
     }
