@@ -132,6 +132,19 @@ impl Editor {
         self.dirty += 1;
     }
 
+    pub fn insert_row(&mut self, at: usize) {
+        if at > self.rows.len() {
+            return;
+        }
+        let left = self.rows[at - 1][0..self.cursor.x as usize].to_string();
+        let right = self.rows[at - 1][self.cursor.x as usize..].to_string();
+        self.rows[at - 1] = left;
+        self.rows.insert(at, String::new());
+        self.rows[at] = right;
+        self.cursor.y += 1;
+        self.cursor.x = 0;
+    }
+
     pub fn row_append_string(&mut self, at: usize) {
         if at > self.rows.len() {
             return;
@@ -172,10 +185,11 @@ impl Editor {
             self.cursor.x -= 1;
             return;
         } else {
+            let len = self.rows[self.cursor.y as usize - 1].len() as u16;
             self.row_append_string(self.cursor.y as usize);
             self.del_row(self.cursor.y as usize);
             self.cursor.y -= 1;
-            self.cursor.x = self.rows[self.cursor.y as usize].len() as u16;
+            self.cursor.x = len;
         }
     }
 
@@ -238,6 +252,10 @@ impl Editor {
                     self.quit_attempts -= 1;
                     return Ok(false);
                 }
+                KeyEvent {
+                    code: KeyCode::Enter,
+                    ..
+                } => self.insert_row(self.cursor.y as usize + 1),
                 KeyEvent {
                     code: KeyCode::Backspace,
                     ..
