@@ -30,7 +30,8 @@ pub struct Editor {
     cursor: Position,
     keymap: HashMap<char, EditorKey>,
     rows: Vec<String>,
-    scroll_offset: usize,
+    row_offset: u16,
+    col_offset: u16,
 }
 
 impl Editor {
@@ -56,7 +57,8 @@ impl Editor {
             cursor: Default::default(),
             keymap,
             rows,
-            scroll_offset: 0,
+            row_offset: 0,
+            col_offset: 0,
         })
     }
 
@@ -66,7 +68,8 @@ impl Editor {
             if self.refresh_screen().is_err() {
                 self.die("editor_refresh_screen");
             };
-            self.screen.move_to(&self.cursor, self.scroll_offset)?;
+            self.screen
+                .move_to(&self.cursor, self.row_offset, self.col_offset)?;
             self.screen.flush()?;
             if self.process_keypress()? {
                 self.screen.clear()?;
@@ -80,17 +83,24 @@ impl Editor {
     pub fn refresh_screen(&mut self) -> Result<()> {
         self.scroll();
         self.screen.clear()?;
-        self.screen.draw_rows(&self.rows, self.scroll_offset)?;
+        self.screen
+            .draw_rows(&self.rows, self.row_offset, self.col_offset)?;
         Ok(())
     }
 
     pub fn scroll(&mut self) {
         let bounds = self.screen.bounds();
-        if (self.cursor.y as usize) < self.scroll_offset {
-            self.scroll_offset = self.cursor.y as usize;
+        if self.cursor.y < self.row_offset {
+            self.row_offset = self.cursor.y;
         }
-        if (self.cursor.y as usize) >= self.scroll_offset + bounds.y as usize {
-            self.scroll_offset = self.cursor.y as usize - bounds.y as usize + 1;
+        if self.cursor.y >= self.row_offset + bounds.y {
+            self.row_offset = self.cursor.y - bounds.y + 1;
+        }
+        if self.cursor.x < self.col_offset {
+            self.col_offset = self.cursor.x;
+        }
+        if self.cursor.x >= self.col_offset + bounds.x {
+            self.col_offset = self.cursor.x - bounds.x + 1;
         }
     }
 
@@ -170,7 +180,7 @@ impl Editor {
         let bounds = self.screen.bounds();
         match key {
             EditorKey::Up => self.cursor.y = self.cursor.y.saturating_sub(1),
-            EditorKey::Right if self.cursor.x < bounds.x - 1 => self.cursor.x += 1,
+            EditorKey::Right => self.cursor.x += 1,
             EditorKey::Down if self.cursor.y < self.rows.len() as u16 - 1 => self.cursor.y += 1,
             EditorKey::Left => self.cursor.x = self.cursor.x.saturating_sub(1),
             EditorKey::Home => self.cursor.x = 0,
