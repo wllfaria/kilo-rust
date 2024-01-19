@@ -35,7 +35,15 @@ pub struct Editor {
 impl Editor {
     pub fn new<P: AsRef<Path>>(filename: Option<P>) -> Result<Self> {
         let rows = match filename {
-            Some(path) => vec![std::fs::read_to_string(path)?],
+            Some(path) => {
+                std::fs::read_to_string(path)
+                    .unwrap()
+                    .split('\n')
+                    .fold(vec![], |mut acc, x| {
+                        acc.push(x.to_string());
+                        acc
+                    })
+            }
             None => Vec::new(),
         };
 
